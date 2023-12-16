@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #define MAX 200
-#define PATH "2.txt"
+#define PATH "day1.txt"
 
 int digit_started(char* start_char) {
     char next_three[3 + 1] = {0}, next_four[4 + 1] = {0},
