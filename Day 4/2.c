@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+
 #define PATH "day4.txt"
 #define MAX_LEN 150
 #define MAX_WINNING_ON_CARD 50
@@ -24,7 +26,7 @@ void get_cards_info(int *winning_start, int *nums_start, int *num_of_winning,
     fgets(line, MAX_LEN, fptr);
 
     *num_of_cards = 1;
-    int i, j, len = strlen(line) - 1;
+    int i, len = strlen(line) - 1;
     for (i = 0; i < len; i++) {
         if (line[i] == ':') {
             *winning_start = i + 2;
@@ -50,7 +52,7 @@ void create_cards(Card *cards, int num_of_winning, int num_of_nums,
                   int winning_start, int nums_start) {
     FILE *fptr = fopen(PATH, "r");
     char line[MAX_LEN];
-    int card_num = 1, ind, i, j;
+    int card_num = 1, ind, i;
 
     while (1) {
         fgets(line, MAX_LEN + 1, fptr);
@@ -123,7 +125,6 @@ int process_card(int card_number, Card *all_cards, int num_of_winning,
 }
 
 int main(void) {
-    char line[MAX_LEN];
     int num_of_winning, num_of_nums, num_of_cards, winning_start, nums_start;
 
     get_cards_info(&winning_start, &nums_start, &num_of_winning, &num_of_nums,
