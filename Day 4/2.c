@@ -1,7 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
-
 #define PATH "day4.txt"
 #define MAX_LEN 150
 #define MAX_WINNING_ON_CARD 50
@@ -115,13 +113,13 @@ int process_card(int card_number, Card *all_cards, int num_of_winning,
         return 0;
     }
 
-    for (int i = 1; i <= num_of_new_cards; i++) {
-        num_of_matches +=
+    for (int i = 1; i <= num_of_matches; i++) {
+        num_of_new_cards +=
             process_card(card_number + i, all_cards, num_of_winning,
                          num_of_nums, memoization_table);
     }
-    *(memoization_table + card_number - 1) = num_of_matches;
-    return num_of_matches;
+
+    return *(memoization_table + card_number - 1) = num_of_new_cards;
 }
 
 int main(void) {
@@ -135,9 +133,9 @@ int main(void) {
     int memoization_table[num_of_cards];
     set_memoization_table(memoization_table, num_of_cards);
 
-    int won_cards = num_of_cards, i;
+    int won_cards = num_of_cards;
 
-    for (i = 0; i < num_of_cards; i++) {
+    for (int i = 0; i < num_of_cards; i++) {
         won_cards += process_card(cards[i].card_num, cards, num_of_winning,
                                   num_of_nums, memoization_table);
     }
