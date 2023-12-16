@@ -11,6 +11,12 @@ typedef struct {
     int nums[MAX_NUMS_ON_CARD];
 } Card;
 
+void set_memoization_table(int *table, int arr_len) {
+    for (int i = 0; i < arr_len; i++) {
+        *(table + i) = -1;
+    }
+}
+
 void get_cards_info(int *winning_start, int *nums_start, int *num_of_winning,
                     int *num_of_nums, int *num_of_cards) {
     FILE *fptr = fopen(PATH, "r");
@@ -94,7 +100,11 @@ int get_num_of_matches(Card *card, int num_of_winning, int num_of_nums) {
 }
 
 int process_card(int card_number, Card *all_cards, int num_of_winning,
-                 int num_of_nums) {
+                 int num_of_nums, int *memoization_table) {
+    if (*(memoization_table + card_number - 1) != -1) {
+        return *(memoization_table + card_number - 1);
+    }
+
     int num_of_matches = get_num_of_matches(all_cards + card_number - 1,
                                             num_of_winning, num_of_nums);
     int num_of_new_cards = num_of_matches;
@@ -104,9 +114,11 @@ int process_card(int card_number, Card *all_cards, int num_of_winning,
     }
 
     for (int i = 1; i <= num_of_new_cards; i++) {
-        num_of_matches += process_card(card_number + i, all_cards,
-                                       num_of_winning, num_of_nums);
+        num_of_matches +=
+            process_card(card_number + i, all_cards, num_of_winning,
+                         num_of_nums, memoization_table);
     }
+    *(memoization_table + card_number - 1) = num_of_matches;
     return num_of_matches;
 }
 
@@ -119,12 +131,14 @@ int main(void) {
 
     Card cards[num_of_cards];
     create_cards(cards, num_of_winning, num_of_nums, winning_start, nums_start);
+    int memoization_table[num_of_cards];
+    set_memoization_table(memoization_table, num_of_cards);
 
     int won_cards = num_of_cards, i;
 
     for (i = 0; i < num_of_cards; i++) {
-        won_cards +=
-            process_card(cards[i].card_num, cards, num_of_winning, num_of_nums);
+        won_cards += process_card(cards[i].card_num, cards, num_of_winning,
+                                  num_of_nums, memoization_table);
     }
 
     printf("%d", won_cards);
