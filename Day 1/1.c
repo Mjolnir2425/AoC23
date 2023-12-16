@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #define MAX 200
-#define PATH "1.txt"
+#define PATH "day1.txt"
 
 int main(void) {
     char line[MAX + 1], previous_line[MAX + 1];
