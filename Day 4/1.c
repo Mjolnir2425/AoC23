@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#define PATH "1.txt"
+#define PATH "day4.txt"
 #define MAX_LEN 150
 
 int main(void) {
