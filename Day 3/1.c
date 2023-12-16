@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#define PATH "1.txt"
+#define PATH "day3.txt"
 #define MAX_LEN 400
 
 bool is_num(char chr) {
