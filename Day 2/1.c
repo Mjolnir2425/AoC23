@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #define MAX 200
-#define PATH "1.txt"
+#define PATH "day2.txt"
 #define MAX_RED 12
 #define MAX_GREEN 13
 #define MAX_BLUE 14
