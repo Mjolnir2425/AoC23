@@ -6,11 +6,20 @@
 
 typedef struct {
     unsigned long long dest_range_start;
+    unsigned long long dest_range_end;
     unsigned long long source_range_start;
+    unsigned long long source_range_end;
+    unsigned long long dest_minus_source;
     unsigned long long range_length;
 } MapEntry;
 
-int get_num_of_seeds() {
+typedef struct {
+    unsigned long long seed_range_start;
+    unsigned long long seed_range_end;
+    unsigned long long seed_range_length;
+} SeedInterval;
+
+int get_num_of_seed_intervals() {
     char line[MAX_LEN];
 
     FILE *fptr = fopen(PATH, "r");
@@ -25,7 +34,7 @@ int get_num_of_seeds() {
         }
     }
 
-    return num_of_seeds;
+    return num_of_seeds / 2;
 }
 
 unsigned long long n_pow_10(unsigned long long n, int to_pow_10) {
@@ -108,6 +117,13 @@ void parse_map_string(char *line, MapEntry *map_entry) {
             n_pow_10(*(line + i) - '0', last_ind - i);
         i--;
     }
+
+    map_entry->source_range_end =
+        map_entry->source_range_start + map_entry->range_length;
+    map_entry->dest_range_end =
+        map_entry->dest_range_start + map_entry->range_length;
+    map_entry->dest_minus_source =
+        map_entry->dest_range_start - map_entry->source_range_start;
 }
 
 void populate_maps(MapEntry *seed_to_soil_map, int seed_len,
@@ -183,132 +199,69 @@ void populate_maps(MapEntry *seed_to_soil_map, int seed_len,
     }
 }
 
-unsigned long long get_seed_loc(unsigned long long seed_num,
-                                MapEntry *seed_to_soil_map, int seed_len,
-                                MapEntry *soil_to_fert_map, int soil_len,
-                                MapEntry *fert_to_water_map, int fert_len,
-                                MapEntry *water_to_light_map, int water_len,
-                                MapEntry *light_to_temp_map, int light_len,
-                                MapEntry *temp_to_humid_map, int temp_len,
-                                MapEntry *humid_to_loc_map, int humid_len) {
-    int i;
-    bool in_mapped_range;
+unsigned long long check_map_by_dest(MapEntry *map, int map_len,
+                                     unsigned long long dest) {
+    bool in_mapped_range = false;
     MapEntry *map_ptr;
-    unsigned long long soil, fert, water, light, temp, humid, loc;
 
-    in_mapped_range = false;
-    for (i = 0; i < seed_len; i++) {
-        map_ptr = seed_to_soil_map + i;
+    for (int i = 0; i < map_len; i++) {
+        map_ptr = map + i;
 
-        if (seed_num >= map_ptr->source_range_start &&
-            seed_num < map_ptr->source_range_start + map_ptr->range_length) {
+        if (dest >= map_ptr->dest_range_start &&
+            dest < map_ptr->dest_range_end) {
             in_mapped_range = true;
-            soil = seed_num + map_ptr->dest_range_start -
-                   map_ptr->source_range_start;
-            break;
+            return dest - map_ptr->dest_minus_source;
         }
     }
-    if (!in_mapped_range) {
-        soil = seed_num;
-    }
 
-    in_mapped_range = false;
-    for (i = 0; i < soil_len; i++) {
-        map_ptr = soil_to_fert_map + i;
+    return dest;
+}
 
-        if (soil >= map_ptr->source_range_start &&
-            soil < map_ptr->source_range_start + map_ptr->range_length) {
-            in_mapped_range = true;
-            fert =
-                soil + map_ptr->dest_range_start - map_ptr->source_range_start;
-            break;
+unsigned long long get_seed_from_loc(
+    unsigned long long loc, MapEntry *seed_to_soil_map, int seed_len,
+    MapEntry *soil_to_fert_map, int soil_len, MapEntry *fert_to_water_map,
+    int fert_len, MapEntry *water_to_light_map, int water_len,
+    MapEntry *light_to_temp_map, int light_len, MapEntry *temp_to_humid_map,
+    int temp_len, MapEntry *humid_to_loc_map, int humid_len) {
+    unsigned long long soil, fert, water, light, temp, humid;
+
+    humid = check_map_by_dest(humid_to_loc_map, humid_len, loc);
+    temp = check_map_by_dest(temp_to_humid_map, temp_len, humid);
+    light = check_map_by_dest(light_to_temp_map, light_len, temp);
+    water = check_map_by_dest(water_to_light_map, water_len, light);
+    fert = check_map_by_dest(fert_to_water_map, fert_len, water);
+    soil = check_map_by_dest(soil_to_fert_map, soil_len, fert);
+    return check_map_by_dest(seed_to_soil_map, seed_len, soil);
+}
+
+void set_seed_intervals(SeedInterval *seed_intervals) {
+    char line[MAX_LEN];
+
+    FILE *fptr = fopen(PATH, "r");
+    fgets(line, MAX_LEN, fptr);
+    fclose(fptr);
+
+    int i, j, last_index = strlen(line) - 2, start_i = last_index,
+              current_interval = 0, nums_detected = 0;
+    unsigned long long num = 0;
+
+    for (i = last_index; i > 5; i--) {
+        if (line[i] != ' ') {
+            num += n_pow_10(line[i] - '0', start_i - i);
+            continue;
         }
-    }
-    if (!in_mapped_range) {
-        fert = soil;
-    }
 
-    in_mapped_range = false;
-    for (i = 0; i < fert_len; i++) {
-        map_ptr = fert_to_water_map + i;
-
-        if (fert >= map_ptr->source_range_start &&
-            fert < map_ptr->source_range_start + map_ptr->range_length) {
-            in_mapped_range = true;
-            water =
-                fert + map_ptr->dest_range_start - map_ptr->source_range_start;
-            break;
+        if (nums_detected++ % 2 == 0) {
+            (seed_intervals + current_interval)->seed_range_length = num;
+        } else {
+            (seed_intervals + current_interval)->seed_range_start = num;
+            (seed_intervals + current_interval)->seed_range_end =
+                num + (seed_intervals + current_interval)->seed_range_length;
+            current_interval++;
         }
+        num = 0;
+        start_i = i - 1;
     }
-    if (!in_mapped_range) {
-        water = fert;
-    }
-
-    in_mapped_range = false;
-    for (i = 0; i < water_len; i++) {
-        map_ptr = water_to_light_map + i;
-
-        if (water >= map_ptr->source_range_start &&
-            water < map_ptr->source_range_start + map_ptr->range_length) {
-            in_mapped_range = true;
-            light =
-                water + map_ptr->dest_range_start - map_ptr->source_range_start;
-            break;
-        }
-    }
-    if (!in_mapped_range) {
-        light = water;
-    }
-
-    in_mapped_range = false;
-    for (i = 0; i < light_len; i++) {
-        map_ptr = light_to_temp_map + i;
-
-        if (light >= map_ptr->source_range_start &&
-            light < map_ptr->source_range_start + map_ptr->range_length) {
-            in_mapped_range = true;
-            temp =
-                light + map_ptr->dest_range_start - map_ptr->source_range_start;
-            break;
-        }
-    }
-    if (!in_mapped_range) {
-        temp = light;
-    }
-
-    in_mapped_range = false;
-    for (i = 0; i < temp_len; i++) {
-        map_ptr = temp_to_humid_map + i;
-
-        if (temp >= map_ptr->source_range_start &&
-            temp < map_ptr->source_range_start + map_ptr->range_length) {
-            in_mapped_range = true;
-            humid =
-                temp + map_ptr->dest_range_start - map_ptr->source_range_start;
-            break;
-        }
-    }
-    if (!in_mapped_range) {
-        humid = temp;
-    }
-
-    in_mapped_range = false;
-    for (i = 0; i < humid_len; i++) {
-        map_ptr = humid_to_loc_map + i;
-
-        if (humid >= map_ptr->source_range_start &&
-            humid < map_ptr->source_range_start + map_ptr->range_length) {
-            in_mapped_range = true;
-            loc =
-                humid + map_ptr->dest_range_start - map_ptr->source_range_start;
-            break;
-        }
-    }
-    if (!in_mapped_range) {
-        loc = humid;
-    }
-
-    return loc;
 }
 
 unsigned long long find_lowest_loc(MapEntry *seed_to_soil_map, int seed_len,
@@ -318,44 +271,26 @@ unsigned long long find_lowest_loc(MapEntry *seed_to_soil_map, int seed_len,
                                    MapEntry *light_to_temp_map, int light_len,
                                    MapEntry *temp_to_humid_map, int temp_len,
                                    MapEntry *humid_to_loc_map, int humid_len) {
-    char line[MAX_LEN];
+    int i, num_of_seed_intervals = get_num_of_seed_intervals();
+    unsigned long long loc = 0, seed;
 
-    FILE *fptr = fopen(PATH, "r");
-    fgets(line, MAX_LEN, fptr);
-    fclose(fptr);
+    SeedInterval seed_intervals[num_of_seed_intervals];
+    set_seed_intervals(seed_intervals);
 
-    int i, j, last_index = strlen(line) - 2, start_i = last_index;
-    unsigned long long num = 0, repeat_times, seed_loc, min_loc,
-                       num_in_interval;
-    bool loc_set = false;
-
-    for (i = last_index; i > 5; i--) {
-        if (line[i] != ' ') {
-            num += n_pow_10(line[i] - '0', start_i - i);
-            continue;
-        }
-
-        if (i % 2) {
-            repeat_times = num;
-        } else {
-            for (num_in_interval = num; num_in_interval < num + repeat_times;
-                 num_in_interval++) {
-                seed_loc = get_seed_loc(
-                    num_in_interval, seed_to_soil_map, seed_len,
-                    soil_to_fert_map, soil_len, fert_to_water_map, fert_len,
-                    water_to_light_map, water_len, light_to_temp_map, light_len,
-                    temp_to_humid_map, temp_len, humid_to_loc_map, humid_len);
-                if (!loc_set || seed_loc < min_loc) {
-                    loc_set = true;
-                    min_loc = seed_loc;
-                }
+    while (1) {
+        seed = get_seed_from_loc(
+            loc, seed_to_soil_map, seed_len, soil_to_fert_map, soil_len,
+            fert_to_water_map, fert_len, water_to_light_map, water_len,
+            light_to_temp_map, light_len, temp_to_humid_map, temp_len,
+            humid_to_loc_map, humid_len);
+        for (i = 0; i < num_of_seed_intervals; i++) {
+            if (seed >= seed_intervals[i].seed_range_start &&
+                seed < seed_intervals[i].seed_range_end) {
+                return loc;
             }
         }
-        num = 0;
-        start_i = i - 1;
+        loc++;
     }
-
-    return min_loc;
 }
 
 int main(void) {
