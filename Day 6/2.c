@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -45,27 +46,7 @@ void set_data(unsigned long long *time, unsigned long long *dist) {
 
 unsigned long long get_num_of_ways(unsigned long long time,
                                    unsigned long long dist) {
-    unsigned long long min_hold, max_hold, hold;
-
-    hold = 1;
-    while (hold < time) {
-        if (hold * (time - hold) > dist) {
-            min_hold = hold;
-            break;
-        }
-        hold++;
-    }
-
-    hold = time - 1;
-    while (hold > 0) {
-        if (hold * (time - hold) > dist) {
-            max_hold = hold;
-            break;
-        }
-        hold--;
-    }
-
-    return max_hold - min_hold + 1;
+    return 1 + sqrtl(time * time - 4 * dist) / 2 * 2;
 }
 
 int main(void) {
