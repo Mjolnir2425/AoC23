@@ -46,7 +46,7 @@ void set_data(unsigned long long *time, unsigned long long *dist) {
 
 unsigned long long get_num_of_ways(unsigned long long time,
                                    unsigned long long dist) {
-    return 1 + sqrtl(time * time - 4 * dist) / 2 * 2;
+    return 1 + (unsigned long long)sqrtl(time * time - 4 * dist) / 2 * 2;
 }
 
 int main(void) {
